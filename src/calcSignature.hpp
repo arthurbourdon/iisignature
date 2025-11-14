@@ -934,6 +934,11 @@ class AdjointSuffixSignature {
         }
     };
 
+                        // Calcul direct de l'index � partir des portions du mot
+                        for (int i = 0; i < other_level; ++i)
+                            left_index = left_index * base + word[i];
+                        for (int i = other_level; i < level; ++i)
+                            right_index = right_index * base + word[i];
 
     class SuffixSignature {
     public:
