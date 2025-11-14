@@ -1017,8 +1017,6 @@ class AdjointSuffixSignature {
                 }
             }
         }
-        delete m_datacopy_ptr;
-        m_datacopy_ptr = nullptr;
 
         template<typename Numeric>
         void writeOut(Numeric* dest) const {
