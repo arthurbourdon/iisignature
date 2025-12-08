@@ -274,43 +274,11 @@ static bool calcSignature(Signature &s2, const char *data,
   }
 
   vector<double> displacement(d);
-<<<<<<< HEAD
   for (int i = 1; i < lengthOfPath; ++i) {
     for (int j = 0; j < d; ++j)
       displacement[j] =
           *(InputT *)(data + i * point_stride + j * dim_stride) -
           *(InputT *)(data + (i - 1) * point_stride + j * dim_stride);
-=======
-  for(int i=1; i<lengthOfPath; ++i){
-    for(int j=0;j<d; ++j)
-      displacement[j]=data[i*d+j]-data[(i-1)*d+j];
-    s1.sigOfSegment(d,level,&displacement[0]);
-    if (interrupt_wanted())
-      return false;
-    if(i==1)
-      s2.swap(s1);
-    else {
-      s2.concatenateWith(d, level, s1);
-      if (interrupt_wanted())
-        return false;
-    }
-  }
-  return true;
-}
-
-
-
-//data is (lengthOfPath x d)
-//out is ((lengthOfPath-1) x siglength)
-//sets out[i] to signature of data[0:i,:]
-static bool calcCumulativeSignature(const double* data, int lengthOfPath, int d, int level, size_t siglength, double* out) {
-  Signature s1, s2;
-
-  vector<double> displacement(d);
-  for (int i = 1; i<lengthOfPath; ++i) {
-    for (int j = 0; j<d; ++j)
-      displacement[j] = data[i*d + j] - data[(i - 1)*d + j];
->>>>>>> 1f7a140 (cleaning previuous code (same version than vanilla iisignature) --> next step : implement class for suffixes and adjoint)
     s1.sigOfSegment(d, level, &displacement[0]);
     if (interrupt_wanted())
       return false;
@@ -471,9 +439,75 @@ static PyObject *sig(PyObject *self, PyObject *args) {
 }
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 static PyObject *sigMultCount(PyObject *self, PyObject *args) {
   PyObject *data;
 =======
+=======
+static PyObject*
+sig_suffix(PyObject* self, PyObject* args) {
+
+    //lecture et validation des arguments Python
+    PyObject* a1;
+    int level = 0;
+    int format = 0;
+    if (!PyArg_ParseTuple(args, "Oi", &a1, &level))
+        return nullptr;
+    if (level < 1) ERR("level must be positive");
+
+    //conversion de lentre Python en tableau NumPy C - contigu
+    //could have a shortcut here if a1 is a contiguous array of float32
+    PyObject* aa = PyArray_ContiguousFromAny(a1, NPY_FLOAT64, 0, 0);
+    if (!aa) ERR("data must be (convertable to) a numpy array");
+    RefHolder a_(aa);
+    PyArrayObject* a = (PyArrayObject*)aa;
+    //lecture des dimensions du tableau
+    int ndims = PyArray_NDIM(a);
+    if (ndims < 2) ERR("data must be 2d");
+    const int lengthOfPath = (int)PyArray_DIM(a, ndims - 2);
+    const int d = (int)PyArray_DIM(a, ndims - 1);
+    if (lengthOfPath < 1) ERR("Path has no length");
+    if (d < 1) ERR("Path must have positive dimension");
+    //gestion du cas multi - paths
+    int nPaths = 1;
+    for (int i = 0; i + 2 < ndims; ++i) {
+        npy_intp x = PyArray_DIM(a, i);
+        nPaths *= (int)x;
+    }
+
+    //calcul des tailles internes 
+    size_t eachInputSize = (size_t)(lengthOfPath * d);
+    size_t eachOutputSize = (size_t)calcSigTotalLengthSuffix(d, level);   
+
+    //prpare le tableau de sortie NumPy
+    PyObject* o = nullptr;
+    using OutT = UseDouble;
+    OutT::T* out_data = nullptr;
+    double* in_data = (double*)PyArray_DATA(a);
+    o = simpleNew_ownLastDim(ndims - 1, a, eachOutputSize, OutT::typenum);
+    if (!o)
+        return nullptr;
+    out_data = static_cast<OutT::T*>(PyArray_DATA(reinterpret_cast<PyArrayObject*>(o)));
+    ReleasableRefHolder o_(o);
+
+    // computation of the signature components on the basis of suffixes words
+    SuffixSignature s;
+    bool ok = do_interruptible([&] {
+        for (int path = 0; path < nPaths; ++path) {
+            if (!calcSignatureSuffix(s, in_data + path * eachInputSize, lengthOfPath, d, level))
+                return false;
+            s.writeOut(out_data + path * eachOutputSize);
+        }
+        return true;
+        });
+    if (!ok)
+        return nullptr;
+    o_.release();
+    return o;
+}
+
+
+>>>>>>> 696b9ab (first commit for methods : good with segments and still bugs with concatenation)
 
 
 static PyObject *
@@ -2620,6 +2654,7 @@ static PyMethodDef Methods[] = {
    "If format is 1, the output is a tuple of arrays, one for each level, not a single one. "
    "If format is 2, the output is an array of shape [...,N-1,siglength(D,m)] of all the cumulative signatures"
    " from the first point to each other point."},
+  {"sig_suffix",sig_suffix,METH_VARARGS, "signature on suffix"},
   {"sigmultcount", sigMultCount, METH_VARARGS, "sigmultcount(X,m)\n "
    "Returns the number of multiplications which sig(X,m) would perform."},
   {"sigjacobian", sigJacobian, METH_VARARGS, "sigjacobian(X,m)\n "
