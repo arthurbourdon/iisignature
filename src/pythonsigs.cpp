@@ -293,6 +293,23 @@ static bool calcSignature(Signature &s2, const char *data,
   return true;
 }
 
+
+static bool calcSignatureSuffix(SuffixSignature& s2, const double* data, int lengthOfPath, int d, int level) {
+    AdjointSuffixSignature s1;
+    s2.sigOfNothing(d, level);
+    std::vector<double> displacement(d);
+
+    for (int i = 1; i < lengthOfPath; ++i) {
+        for (int j = 0; j < d; ++j)
+            displacement[j] = data[i * d + j] - data[(i - 1) * d + j];
+        s1.sigOfSegment(d, level, displacement.data());
+        s2.concatenateWith(d, level, s1);
+    }
+    return true;
+}
+
+
+
 // data is (lengthOfPath x d) with given strides
 // out is ((lengthOfPath-1) x siglength)
 // sets out[i] to signature of data[0:i,:]
@@ -438,48 +455,37 @@ static PyObject *sig(PyObject *self, PyObject *args) {
   return o;
 }
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-static PyObject *sigMultCount(PyObject *self, PyObject *args) {
-  PyObject *data;
-=======
-=======
-static PyObject*
-sig_suffix(PyObject* self, PyObject* args) {
-
-    //lecture et validation des arguments Python
-    PyObject* a1;
+static PyObject *sig_suffix(PyObject *self, PyObject *args) {
+    PyObject *a1;
     int level = 0;
     int format = 0;
     if (!PyArg_ParseTuple(args, "Oi", &a1, &level))
         return nullptr;
     if (level < 1) ERR("level must be positive");
 
-    //conversion de lentre Python en tableau NumPy C - contigu
-    //could have a shortcut here if a1 is a contiguous array of float32
-    PyObject* aa = PyArray_ContiguousFromAny(a1, NPY_FLOAT64, 0, 0);
+   
+    PyObject *aa = PyArray_ContiguousFromAny(a1, NPY_FLOAT64, 0, 0);
     if (!aa) ERR("data must be (convertable to) a numpy array");
     RefHolder a_(aa);
-    PyArrayObject* a = (PyArrayObject*)aa;
-    //lecture des dimensions du tableau
+    PyArrayObject *a = (PyArrayObject*)aa;
+
     int ndims = PyArray_NDIM(a);
     if (ndims < 2) ERR("data must be 2d");
     const int lengthOfPath = (int)PyArray_DIM(a, ndims - 2);
     const int d = (int)PyArray_DIM(a, ndims - 1);
     if (lengthOfPath < 1) ERR("Path has no length");
     if (d < 1) ERR("Path must have positive dimension");
-    //gestion du cas multi - paths
+   
     int nPaths = 1;
     for (int i = 0; i + 2 < ndims; ++i) {
         npy_intp x = PyArray_DIM(a, i);
         nPaths *= (int)x;
     }
 
-    //calcul des tailles internes 
+  
     size_t eachInputSize = (size_t)(lengthOfPath * d);
     size_t eachOutputSize = (size_t)calcSigTotalLengthSuffix(d, level);   
 
-    //prpare le tableau de sortie NumPy
     PyObject* o = nullptr;
     using OutT = UseDouble;
     OutT::T* out_data = nullptr;
@@ -507,13 +513,9 @@ sig_suffix(PyObject* self, PyObject* args) {
 }
 
 
->>>>>>> 696b9ab (first commit for methods : good with segments and still bugs with concatenation)
-
-
 static PyObject *
 sigMultCount(PyObject *self, PyObject *args) {
   PyObject* data;
->>>>>>> 1f7a140 (cleaning previuous code (same version than vanilla iisignature) --> next step : implement class for suffixes and adjoint)
   int level = 0;
   int format;
   if (!PyArg_ParseTuple(args, "Oi|i", &data, &level, &format))
@@ -2580,7 +2582,6 @@ static PyObject *rotinv2dcoeffs(PyObject *self, PyObject *args) {
 
 static PyMethodDef Methods[] = {
 #ifndef IISIGNATURE_NO_NUMPY
-<<<<<<< HEAD
     {"sig", sig, METH_VARARGS,
      "sig(X,m,format=0)\n Returns the signature of a path X "
      "up to level m as an array of shape (...,siglength(D,m)). X must be "
@@ -2647,51 +2648,6 @@ static PyMethodDef Methods[] = {
      "derivatives"
      " of F with respect to sigscale(X,D,m). The result is a tuple of two "
      "items."},
-=======
-  {"sig",  sig, METH_VARARGS, "sig(X,m,format=0)\n Returns the signature of a path X "
-  "up to level m as an array of shape (...,siglength(D,m)). X must be convertible to a numpy [...x]NxD float32 or float64 array of points"
-  "making up the path in R^D. The initial 1 in the zeroth level of the signature is excluded. "
-   "If format is 1, the output is a tuple of arrays, one for each level, not a single one. "
-   "If format is 2, the output is an array of shape [...,N-1,siglength(D,m)] of all the cumulative signatures"
-   " from the first point to each other point."},
-  {"sig_suffix",sig_suffix,METH_VARARGS, "signature on suffix"},
-  {"sigmultcount", sigMultCount, METH_VARARGS, "sigmultcount(X,m)\n "
-   "Returns the number of multiplications which sig(X,m) would perform."},
-  {"sigjacobian", sigJacobian, METH_VARARGS, "sigjacobian(X,m)\n "
-   "Returns the full Jacobian matrix of "
-   "derivatives of sig(X,m) with respect to X. "
-   "If X is an NxD array then the output is an NxDx(siglength(D,m)) array."},
-  {"sigbackprop", sigBackwards, METH_VARARGS, "sigbackprop(s,X,m)\n "
-   "If s is the derivative of something with respect to sig(X,m), "
-   "then this returns the derivative of that thing with respect to X. "
-   "sigbackprop(s,X,m) should be approximately numpy.dot(sigjacobian(X,m),s)"},
-  {"sigjoin", sigJoin, METH_VARARGS, "sigjoin(X,D,m,f=float('nan'))\n "
-   "If X is an array of signatures of d dimensional paths of shape "
-   "(..., siglength(d,m)) and D is an array of d dimensional displacements "
-   "of shape (..., d), then return an array shaped like X "
-   "of the signatures of the paths concatenated with the displacements. "
-   "If f is provided, then it is taken to be the fixed value of the "
-   "displacement in the last dimension, and D should have shape (K, d-1)."},
-  {"sigjoinbackprop",sigJoinBackwards,METH_VARARGS, "sigjoinbackprop(s,X,D,m,f=float('nan')) \n "
-   "gives the derivatives of F with respect to X and D (and f if given) where s is the derivatives"
-   " of F with respect to sigjoin(X,D,m,f). The result is a tuple of two or three items."},
-  {"sigcombine", sigCombine, METH_VARARGS, "sigcombine(X1,X2,d,m)\n "
-   "If X1 and X2 are arrays of signatures of d dimensional paths of shape "
-   "(..., siglength(d,m)), then return an array of the same shape "
-   "of the signatures of each path from X1 concatenated with each path from X2. "
-   "In other words, this is the concatenation/Chen product of two signatures."},
-  {"sigcombinebackprop",sigCombineBackwards,METH_VARARGS, "sigcombinebackprop(s,X1,X2,d,m) \n "
-   "gives the derivatives of F with respect to X1 and X2 where s is the derivatives"
-   " of F with respect to sigcombine(X1,X2,d,m). The result is a tuple of two items."},
-  {"sigscale", sigScale, METH_VARARGS, "sigscale(X,D,m))\n "
-   "If X is an array of signatures of d dimensional paths of shape "
-   "(..., siglength(d,m)) and D is an array of d dimensional scales "
-   "of shape (..., d), then return an array shaped like X "
-   "of the signatures of the paths scaled by the corresponding scale factor in each dimension. "},
-  {"sigscalebackprop",sigScaleBackwards,METH_VARARGS, "sigscalebackprop(s,X,D,m) \n "
-   "gives the derivatives of F with respect to X and D where s is the derivatives"
-   " of F with respect to sigscale(X,D,m). The result is a tuple of two items."},
->>>>>>> 1f7a140 (cleaning previuous code (same version than vanilla iisignature) --> next step : implement class for suffixes and adjoint)
 #endif
     {"siglength", siglength, METH_VARARGS,
      "siglength(d,m) \n "
