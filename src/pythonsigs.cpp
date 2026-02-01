@@ -2582,72 +2582,51 @@ static PyObject *rotinv2dcoeffs(PyObject *self, PyObject *args) {
 
 static PyMethodDef Methods[] = {
 #ifndef IISIGNATURE_NO_NUMPY
-    {"sig", sig, METH_VARARGS,
-     "sig(X,m,format=0)\n Returns the signature of a path X "
-     "up to level m as an array of shape (...,siglength(D,m)). X must be "
-     "convertible to a numpy [...x]NxD float32 or float64 array of points "
-     "making up the path in R^D. The initial 1 in the zeroth level of the "
-     "signature is excluded. "
-     "If format is 1, the output is a tuple of arrays, one for each level, not "
-     "a single one. "
-     "If format is 2, the output is an array of shape [...,N-1,siglength(D,m)] "
-     "of all the cumulative signatures"
-     " from the first point to each other point."},
-    {"sigmultcount", sigMultCount, METH_VARARGS,
-     "sigmultcount(X,m)\n "
-     "Returns the number of multiplications which sig(X,m) would perform."},
-    {"sigjacobian", sigJacobian, METH_VARARGS,
-     "sigjacobian(X,m)\n "
-     "Returns the full Jacobian matrix of "
-     "derivatives of sig(X,m) with respect to X. "
-     "If X is an NxD array then the output is an NxDx(siglength(D,m)) array."},
-    {"sigbackprop", sigBackwards, METH_VARARGS,
-     "sigbackprop(s,X,m)\n "
-     "If s is the derivative of something with respect to sig(X,m), "
-     "then this returns the derivative of that thing with respect to X. "
-     "sigbackprop(s,X,m) should be approximately "
-     "numpy.dot(sigjacobian(X,m),s)"},
-    {"sigjoin", sigJoin, METH_VARARGS,
-     "sigjoin(X,D,m,f=float('nan'))\n "
-     "If X is an array of signatures of d dimensional paths of shape "
-     "(..., siglength(d,m)) and D is an array of d dimensional displacements "
-     "of shape (..., d), then return an array shaped like X "
-     "of the signatures of the paths concatenated with the displacements. "
-     "If f is provided, then it is taken to be the fixed value of the "
-     "displacement in the last dimension, and D should have shape (K, d-1)."},
-    {"sigjoinbackprop", sigJoinBackwards, METH_VARARGS,
-     "sigjoinbackprop(s,X,D,m,f=float('nan')) \n "
-     "gives the derivatives of F with respect to X and D (and f if given) "
-     "where s is the derivatives"
-     " of F with respect to sigjoin(X,D,m,f). The result is a tuple of two or "
-     "three items."},
-    {"sigcombine", sigCombine, METH_VARARGS,
-     "sigcombine(X1,X2,d,m)\n "
-     "If X1 and X2 are arrays of signatures of d dimensional paths of shape "
-     "(..., siglength(d,m)), then return an array of the same shape "
-     "of the signatures of each path from X1 concatenated with each path from "
-     "X2. "
-     "In other words, this is the concatenation/Chen product of two "
-     "signatures."},
-    {"sigcombinebackprop", sigCombineBackwards, METH_VARARGS,
-     "sigcombinebackprop(s,X1,X2,d,m) \n "
-     "gives the derivatives of F with respect to X1 and X2 where s is the "
-     "derivatives"
-     " of F with respect to sigcombine(X1,X2,d,m). The result is a tuple of "
-     "two items."},
-    {"sigscale", sigScale, METH_VARARGS,
-     "sigscale(X,D,m)\n "
-     "If X is an array of signatures of d dimensional paths of shape "
-     "(..., siglength(d,m)) and D is an array of d dimensional scales "
-     "of shape (..., d), then return an array shaped like X "
-     "of the signatures of the paths scaled by the corresponding scale factor "
-     "in each dimension. "},
-    {"sigscalebackprop", sigScaleBackwards, METH_VARARGS,
-     "sigscalebackprop(s,X,D,m) \n "
-     "gives the derivatives of F with respect to X and D where s is the "
-     "derivatives"
-     " of F with respect to sigscale(X,D,m). The result is a tuple of two "
-     "items."},
+  {"sig",  sig, METH_VARARGS, "sig(X,m,format=0)\n Returns the signature of a path X "
+  "up to level m as an array of shape (...,siglength(D,m)). X must be convertible to a numpy [...x]NxD float32 or float64 array of points"
+  "making up the path in R^D. The initial 1 in the zeroth level of the signature is excluded. "
+   "If format is 1, the output is a tuple of arrays, one for each level, not a single one. "
+   "If format is 2, the output is an array of shape [...,N-1,siglength(D,m)] of all the cumulative signatures"
+   " from the first point to each other point."},
+  {"sig_suffix",sig_suffix,METH_VARARGS, "sig_suffix(X,m)\n For a path X (array of shape(n_paths,n_steps,d) with d>1, it returns the terminal value of the signature components associated with "
+    "words of length not greater than m which do not start by the letter 0. The resulting array is of shape(n_paths,d**m - 1): the emptyword is not considered. This method is relevant when "
+    " the first component of the path X is the running time variable: the linear span of these components is the same as the span of all components of level not greater than m."},
+  {"sigmultcount", sigMultCount, METH_VARARGS, "sigmultcount(X,m)\n "
+   "Returns the number of multiplications which sig(X,m) would perform."},
+  {"sigjacobian", sigJacobian, METH_VARARGS, "sigjacobian(X,m)\n "
+   "Returns the full Jacobian matrix of "
+   "derivatives of sig(X,m) with respect to X. "
+   "If X is an NxD array then the output is an NxDx(siglength(D,m)) array."},
+  {"sigbackprop", sigBackwards, METH_VARARGS, "sigbackprop(s,X,m)\n "
+   "If s is the derivative of something with respect to sig(X,m), "
+   "then this returns the derivative of that thing with respect to X. "
+   "sigbackprop(s,X,m) should be approximately numpy.dot(sigjacobian(X,m),s)"},
+  {"sigjoin", sigJoin, METH_VARARGS, "sigjoin(X,D,m,f=float('nan'))\n "
+   "If X is an array of signatures of d dimensional paths of shape "
+   "(..., siglength(d,m)) and D is an array of d dimensional displacements "
+   "of shape (..., d), then return an array shaped like X "
+   "of the signatures of the paths concatenated with the displacements. "
+   "If f is provided, then it is taken to be the fixed value of the "
+   "displacement in the last dimension, and D should have shape (K, d-1)."},
+  {"sigjoinbackprop",sigJoinBackwards,METH_VARARGS, "sigjoinbackprop(s,X,D,m,f=float('nan')) \n "
+   "gives the derivatives of F with respect to X and D (and f if given) where s is the derivatives"
+   " of F with respect to sigjoin(X,D,m,f). The result is a tuple of two or three items."},
+  {"sigcombine", sigCombine, METH_VARARGS, "sigcombine(X1,X2,d,m)\n "
+   "If X1 and X2 are arrays of signatures of d dimensional paths of shape "
+   "(..., siglength(d,m)), then return an array of the same shape "
+   "of the signatures of each path from X1 concatenated with each path from X2. "
+   "In other words, this is the concatenation/Chen product of two signatures."},
+  {"sigcombinebackprop",sigCombineBackwards,METH_VARARGS, "sigcombinebackprop(s,X1,X2,d,m) \n "
+   "gives the derivatives of F with respect to X1 and X2 where s is the derivatives"
+   " of F with respect to sigcombine(X1,X2,d,m). The result is a tuple of two items."},
+  {"sigscale", sigScale, METH_VARARGS, "sigscale(X,D,m))\n "
+   "If X is an array of signatures of d dimensional paths of shape "
+   "(..., siglength(d,m)) and D is an array of d dimensional scales "
+   "of shape (..., d), then return an array shaped like X "
+   "of the signatures of the paths scaled by the corresponding scale factor in each dimension. "},
+  {"sigscalebackprop",sigScaleBackwards,METH_VARARGS, "sigscalebackprop(s,X,D,m) \n "
+   "gives the derivatives of F with respect to X and D where s is the derivatives"
+   " of F with respect to sigscale(X,D,m). The result is a tuple of two items."},
 #endif
     {"siglength", siglength, METH_VARARGS,
      "siglength(d,m) \n "
