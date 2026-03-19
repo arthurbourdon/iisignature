@@ -293,7 +293,8 @@ static bool calcSignature(Signature &s2, const char *data,
   return true;
 }
 
-
+using CalcSignature::SuffixSignature;
+using CalcSignature::AdjointSuffixSignature;
 static bool calcSignatureSuffix(SuffixSignature& s2, const double* data, int lengthOfPath, int d, int level) {
     AdjointSuffixSignature s1;
     s2.sigOfNothing(d, level);

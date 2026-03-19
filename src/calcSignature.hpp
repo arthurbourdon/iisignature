@@ -16,6 +16,12 @@ int calcSigTotalLength(int d, int m) {
   return d * (p - 1) / (d - 1);
 }
 
+int calcSigTotalLengthSuffix(int d, int m) {
+   
+    int64_t p = static_cast<int64_t>(0.4 + std::pow(d, m));
+    return p-1;
+}
+
 namespace CalcSignature {
 using std::vector;
 
@@ -934,13 +940,8 @@ class AdjointSuffixSignature {
         }
     };
 
-                        // Calcul direct de l'index � partir des portions du mot
-                        for (int i = 0; i < other_level; ++i)
-                            left_index = left_index * base + word[i];
-                        for (int i = other_level; i < level; ++i)
-                            right_index = right_index * base + word[i];
-
-    class SuffixSignature {
+                       
+class SuffixSignature {
     public:
         std::vector<std::vector<double>> m_data;
 
