@@ -17,9 +17,9 @@ int calcSigTotalLength(int d, int m) {
 }
 
 int calcSigTotalLengthSuffix(int d, int m) {
-   
-    int64_t p = static_cast<int64_t>(0.4 + std::pow(d, m));
-    return p-1;
+
+  int64_t p = static_cast<int64_t>(0.4 + std::pow(d, m));
+  return p - 1;
 }
 
 namespace CalcSignature {
@@ -881,158 +881,167 @@ void sigScaleBackwards(int d, int m, const Number *signature,
 
 // Implementation of SuffixSignature and its "adjoint" for the tensor product
 //
-// Minimal construction for this class to work : sigOfSegment, sigOfNothing, concatenateWith
+// Minimal construction for this class to work : sigOfSegment, sigOfNothing,
+// concatenateWith
 
 class AdjointSuffixSignature {
-    public:
-        std::vector<std::vector<double>> m_data;
+public:
+  std::vector<std::vector<double>> m_data;
 
-        void sigOfSegment(int d, int N, const double* segment) {
-            if (m_data.size() != (size_t)N) m_data.resize(N);
+  void sigOfSegment(int d, int N, const double *segment) {
+    if (m_data.size() != (size_t)N)
+      m_data.resize(N);
 
-            // Level 1
-            m_data[0].assign(segment, segment + d);
+    // Level 1
+    m_data[0].assign(segment, segment + d);
 
-            // Levels 2,..,N-1
-            for (int level = 2; level < N; ++level) {
-                const auto& prev = m_data[level - 2];
-                int L = prev.size() * d;
-                if (m_data[level - 1].size() != (size_t)L) m_data[level - 1].resize(L);
+    // Levels 2,..,N-1
+    for (int level = 2; level < N; ++level) {
+      const auto &prev = m_data[level - 2];
+      int L = prev.size() * d;
+      if (m_data[level - 1].size() != (size_t)L)
+        m_data[level - 1].resize(L);
 
-                double factor = 1.0 / level;
-                int idx = 0;
-                for (double v : prev)
-                    for (int a = 0; a < d; ++a)
-                        m_data[level - 1][idx++] = v * segment[a] * factor;
-            }
+      double factor = 1.0 / level;
+      int idx = 0;
+      for (double v : prev)
+        for (int a = 0; a < d; ++a)
+          m_data[level - 1][idx++] = v * segment[a] * factor;
+    }
 
-            // Level N
-            if (N >= 2) {
-                const auto& prev = m_data[N - 2];
-                int block = prev.size();
-                int kept_len = (d - 1) * block;
-                if (m_data[N - 1].size() != (size_t)kept_len) m_data[N - 1].resize(kept_len);
+    // Level N
+    if (N >= 2) {
+      const auto &prev = m_data[N - 2];
+      int block = prev.size();
+      int kept_len = (d - 1) * block;
+      if (m_data[N - 1].size() != (size_t)kept_len)
+        m_data[N - 1].resize(kept_len);
 
-                double factor = 1.0 / N;
-                int idx = 0;
-                for (int a = 1; a < d; ++a)
-                    for (double v : prev)
-                        m_data[N - 1][idx++] = v * segment[a] * factor;
-            }
-        }
+      double factor = 1.0 / N;
+      int idx = 0;
+      for (int a = 1; a < d; ++a)
+        for (double v : prev)
+          m_data[N - 1][idx++] = v * segment[a] * factor;
+    }
+  }
 
-        void sigOfNothing(int d, int N) {
-            if (m_data.size() != (size_t)N) m_data.resize(N);
-            m_data[0].assign(d, 0.0);
+  void sigOfNothing(int d, int N) {
+    if (m_data.size() != (size_t)N)
+      m_data.resize(N);
+    m_data[0].assign(d, 0.0);
 
-            int size = d;
-            for (int level = 2; level < N; ++level) {
-                size *= d;
-                if (m_data[level - 1].size() != (size_t)size) m_data[level - 1].resize(size);
-                std::fill(m_data[level - 1].begin(), m_data[level - 1].end(), 0.0);
-            }
+    int size = d;
+    for (int level = 2; level < N; ++level) {
+      size *= d;
+      if (m_data[level - 1].size() != (size_t)size)
+        m_data[level - 1].resize(size);
+      std::fill(m_data[level - 1].begin(), m_data[level - 1].end(), 0.0);
+    }
 
-            if (N >= 2) {
-                int kept_len = (d - 1) * size;
-                if (m_data[N - 1].size() != (size_t)kept_len) m_data[N - 1].resize(kept_len);
-                std::fill(m_data[N - 1].begin(), m_data[N - 1].end(), 0.0);
-            }
-        }
-    };
+    if (N >= 2) {
+      int kept_len = (d - 1) * size;
+      if (m_data[N - 1].size() != (size_t)kept_len)
+        m_data[N - 1].resize(kept_len);
+      std::fill(m_data[N - 1].begin(), m_data[N - 1].end(), 0.0);
+    }
+  }
+};
 
-                       
 class SuffixSignature {
-    public:
-        std::vector<std::vector<double>> m_data;
+public:
+  std::vector<std::vector<double>> m_data;
 
-        void sigOfSegment(int d, int m, const double* segment) {
-            if (m_data.size() != (size_t)m) m_data.resize(m);
+  void sigOfSegment(int d, int m, const double *segment) {
+    if (m_data.size() != (size_t)m)
+      m_data.resize(m);
 
-            // Level 1
-            if (m_data[0].size() != (size_t)(d - 1)) m_data[0].resize(d - 1);
-            for (int i = 1; i < d; ++i)
-                m_data[0][i - 1] = segment[i];
+    // Level 1
+    if (m_data[0].size() != (size_t)(d - 1))
+      m_data[0].resize(d - 1);
+    for (int i = 1; i < d; ++i)
+      m_data[0][i - 1] = segment[i];
 
-            // Levels >= 2
-            for (int level = 2; level <= m; ++level) {
-                int full_size = 1;
-                for (int i = 0; i < level; ++i) full_size *= d;
-                int skip = full_size / d;
-                int keep = full_size - skip;
+    // Levels >= 2
+    for (int level = 2; level <= m; ++level) {
+      int full_size = 1;
+      for (int i = 0; i < level; ++i)
+        full_size *= d;
+      int skip = full_size / d;
+      int keep = full_size - skip;
 
-                if (m_data[level - 1].size() != (size_t)keep) m_data[level - 1].resize(keep);
-                std::fill(m_data[level - 1].begin(), m_data[level - 1].end(), 0.0);
+      if (m_data[level - 1].size() != (size_t)keep)
+        m_data[level - 1].resize(keep);
+      std::fill(m_data[level - 1].begin(), m_data[level - 1].end(), 0.0);
 
-                const auto& last = m_data[level - 2];
-                double inv = 1.0 / level;
-                int idx = 0;
-                for (double l : last) {
-                    for (int p = 0; p < d; ++p) {
-                        m_data[level - 1][idx++] = l * segment[p] * inv;
-                    }
-                }
-            }
+      const auto &last = m_data[level - 2];
+      double inv = 1.0 / level;
+      int idx = 0;
+      for (double l : last) {
+        for (int p = 0; p < d; ++p) {
+          m_data[level - 1][idx++] = l * segment[p] * inv;
         }
+      }
+    }
+  }
 
-        void sigOfNothing(int d, int m) {
-            if (m_data.size() != (size_t)m) m_data.resize(m);
-            m_data[0].assign(d - 1, 0.0);
+  void sigOfNothing(int d, int m) {
+    if (m_data.size() != (size_t)m)
+      m_data.resize(m);
+    m_data[0].assign(d - 1, 0.0);
 
-            int size = d - 1;
-            for (int level = 2; level <= m; ++level) {
-                size *= d;
-                if (m_data[level - 1].size() != (size_t)size) m_data[level - 1].resize(size);
-                std::fill(m_data[level - 1].begin(), m_data[level - 1].end(), 0.0);
-            }
+    int size = d - 1;
+    for (int level = 2; level <= m; ++level) {
+      size *= d;
+      if (m_data[level - 1].size() != (size_t)size)
+        m_data[level - 1].resize(size);
+      std::fill(m_data[level - 1].begin(), m_data[level - 1].end(), 0.0);
+    }
+  }
+
+  void concatenateWith(int d, int m, const AdjointSuffixSignature &other) {
+    if (m_data.size() != (size_t)m)
+      sigOfNothing(d, m);
+
+    for (int L = m; L >= 1; --L) {
+      auto &destCompact = m_data[L - 1];
+      const auto &srcFull = other.m_data[L - 1];
+
+      if (L == (int)other.m_data.size() &&
+          srcFull.size() == (d - 1) * (srcFull.size() / (d - 1))) {
+        for (size_t i = 0; i < srcFull.size(); ++i)
+          destCompact[i] += srcFull[i];
+      } else {
+        int block = 1;
+        for (int i = 0; i < L - 1; ++i)
+          block *= d;
+        int pos = 0;
+        for (int first = 1; first < d; ++first) {
+          int base = first * block;
+          for (int off = 0; off < block; ++off)
+            destCompact[pos++] += srcFull[base + off];
         }
+      }
 
-        void concatenateWith(int d, int m, const AdjointSuffixSignature& other) {
-            if (m_data.size() != (size_t)m) sigOfNothing(d, m);
-
-            for (int L = m; L >= 1; --L) {
-                auto& destCompact = m_data[L - 1];
-                const auto& srcFull = other.m_data[L - 1];
-
-                
-                if (L == (int)other.m_data.size() && srcFull.size() == (d - 1) * (srcFull.size() / (d - 1))) {
-                    for (size_t i = 0; i < srcFull.size(); ++i)
-                        destCompact[i] += srcFull[i];
-                }
-                else {
-                    int block = 1;
-                    for (int i = 0; i < L - 1; ++i) block *= d;
-                    int pos = 0;
-                    for (int first = 1; first < d; ++first) {
-                        int base = first * block;
-                        for (int off = 0; off < block; ++off)
-                            destCompact[pos++] += srcFull[base + off];
-                    }
-                }
-
-                
-                for (int mylevel = L - 1; mylevel >= 1; --mylevel) {
-                    int otherlevel = L - mylevel;
-                    const auto& myVec = m_data[mylevel - 1];
-                    const auto& othFull = other.m_data[otherlevel - 1];
-                    int write_pos = 0;
-                    for (double lv : myVec) {
-                        for (double rv : othFull) {
-                            destCompact[write_pos++] += lv * rv;
-                        }
-                    }
-                }
-            }
+      for (int mylevel = L - 1; mylevel >= 1; --mylevel) {
+        int otherlevel = L - mylevel;
+        const auto &myVec = m_data[mylevel - 1];
+        const auto &othFull = other.m_data[otherlevel - 1];
+        int write_pos = 0;
+        for (double lv : myVec) {
+          for (double rv : othFull) {
+            destCompact[write_pos++] += lv * rv;
+          }
         }
+      }
+    }
+  }
 
-        template<typename Numeric>
-        void writeOut(Numeric* dest) const {
-            for (auto& a : m_data)
-                for (auto& b : a)
-                    *(dest++) = (Numeric)b;
-        }
-    };
-
-
+  template <typename Numeric> void writeOut(Numeric *dest) const {
+    for (auto &a : m_data)
+      for (auto &b : a)
+        *(dest++) = (Numeric)b;
+  }
+};
 
 } // namespace CalcSignature
 
