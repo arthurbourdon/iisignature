@@ -1351,12 +1351,9 @@ class Float32Input(unittest.TestCase):
         numpy.testing.assert_allclose(result_f32, result_f64, rtol=1e-5)
 
 
-
 class SuffixSignature(TestCase):
-
     def extract(self, signature, d, order):
-
-        is_1d = (signature.ndim == 1)
+        is_1d = signature.ndim == 1
 
         if is_1d:
             signature = signature.reshape(1, -1)
@@ -1374,23 +1371,21 @@ class SuffixSignature(TestCase):
         sig_extract = numpy.concatenate(kept_slices, axis=1)
 
         if is_1d:
-            return sig_extract[0]   
+            return sig_extract[0]
         else:
-            return sig_extract     
+            return sig_extract
 
     def test_suffix_consistency(self):
-
-        path = numpy.array([[0, 0], [0.25, 3], [0.5, 2], [0.75,10], [1,8]])
+        path = numpy.array([[0, 0], [0.25, 3], [0.5, 2], [0.75, 10], [1, 8]])
         level = 4
-        d=1
+        d = 1
 
         sig1 = iisignature.sig(path, level)
         sig2 = iisignature.sig_suffix(path, level)
 
-        self.assertTrue(numpy.allclose(self.extract(sig1,d,level), sig2))
+        self.assertTrue(numpy.allclose(self.extract(sig1, d, level), sig2))
 
     def test_suffix_edge_case_single_point(self):
-
         path = numpy.array([[0, 0]])
         level = 3
 
@@ -1399,7 +1394,6 @@ class SuffixSignature(TestCase):
         self.assertTrue(numpy.allclose(sig_empty, numpy.zeros_like(sig_empty)))
 
     def test_suffix_multipath_consistency(self):
-
         level = 3
 
         path1 = numpy.array([[0, 0], [0.5, 0], [1, 1]])
@@ -1415,7 +1409,7 @@ class SuffixSignature(TestCase):
         self.assertTrue(numpy.allclose(sigs_multi[0], sig1))
         self.assertTrue(numpy.allclose(sigs_multi[1], sig2))
 
-        
+
 if __name__ == "__main__":
     sys.path.append("..")
     import iisignature
